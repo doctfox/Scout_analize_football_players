@@ -1,0 +1,16 @@
+# Тема веб-приложения в стиле Football Manager (тёмные панели, зелёный акцент).
+# Streamlit читает этот файл, когда запускается из корня проекта (run_app.bat).
+[theme]
+base = "dark"
+primaryColor = "#2bc07a"
+backgroundColor = "#13151d"
+secondaryBackgroundColor = "#1d2030"
+textColor = "#e6e8ef"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
+
+[client]
+# без кнопки Deploy и меню разработчика в углу
+toolbarMode = "minimal"

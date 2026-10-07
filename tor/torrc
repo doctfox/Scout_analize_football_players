@@ -1,0 +1,10 @@
+User tor
+DataDirectory /var/lib/tor
+Log notice stdout
+
+SocksPort 0.0.0.0:9050
+HTTPTunnelPort 0.0.0.0:8118
+ControlPort 0.0.0.0:9051
+
+# Новая цепочка не реже раза в 10 мин (по умолчанию), по сигналу NEWNYM - сразу
+MaxCircuitDirtiness 600

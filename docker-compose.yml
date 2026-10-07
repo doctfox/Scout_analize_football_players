@@ -1,0 +1,88 @@
+# Весь стек парсера: PostgreSQL + pgvector, transfermarkt-api и сам парсер.
+#   docker compose up -d db tm-api          поднять БД и API
+#   docker compose run --rm parser all      запустить сбор (шаги как у main.py)
+# Проще — двойной клик по start.bat.
+# Через Tor (settings.env: USE_TOR=1): start.bat сам поднимет сервис tor и передаст TM_PROXY.
+name: scout
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: scout-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
+      POSTGRES_DB: ${DB_NAME:-project_futbol}
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  tor:
+    # Tor-прокси для запросов к Transfermarkt (папка tor/). Порты только внутри сети compose.
+    build: ./tor
+    image: scout-tor
+    container_name: scout-tor
+    restart: unless-stopped
+    environment:
+      TOR_CONTROL_PASSWORD: ${TOR_CONTROL_PASSWORD:-scout}
+    healthcheck:
+      test: ["CMD", "/healthcheck.sh"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  tm-api:
+    # образ собирается прямо из репозитория https://github.com/felipeall/transfermarkt-api
+    build: https://github.com/felipeall/transfermarkt-api.git
+    image: scout-tm-api
+    container_name: scout-tm-api
+    restart: unless-stopped
+    environment:
+      RATE_LIMITING_ENABLE: "false"
+      # requests внутри tm-api сам берёт прокси из этих переменных; пусто = напрямую
+      HTTPS_PROXY: ${TM_PROXY:-}
+      HTTP_PROXY: ${TM_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1
+    ports:
+      - "${TM_PORT:-8000}:8000"
+
+  parser:
+    build: .
+    image: scout-parser
+    depends_on:
+      db:
+        condition: service_healthy
+      tm-api:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD:-change_me}@db:5432/${DB_NAME:-project_futbol}
+      TM_API_URL: http://tm-api:8000
+      SEASONS: ${SEASONS:-auto}
+      FIRST_SEASON: ${FIRST_SEASON:-2021}
+      LEAGUES: ${LEAGUES:-}
+      TM_CURRENT_TTL_DAYS: ${TM_CURRENT_TTL_DAYS:-7}
+      TM_SOURCE: ${TM_SOURCE:-auto}
+      TM_WORKERS: ${TM_WORKERS:-1}
+      TM_DELAY: ${TM_DELAY:-3}
+      TM_PROXY: ${TM_PROXY:-}
+      TOR_CONTROL_HOST: tor
+      TOR_CONTROL_PASSWORD: ${TOR_CONTROL_PASSWORD:-scout}
+      TOR_ROTATE_PAUSE: ${TOR_ROTATE_PAUSE:-15}
+      TOR_ROTATIONS_BEFORE_PAUSE: ${TOR_ROTATIONS_BEFORE_PAUSE:-10}
+      SOCCERDATA_DIR: /data/soccerdata
+    volumes:
+      - ./cache:/app/cache                    # кэш ответов Transfermarkt
+      - ./reports:/app/reports                # несопоставленные игроки/команды
+      - ./data/soccerdata:/data/soccerdata    # кэш soccerdata (Understat, ClubElo, WhoScored)
+    profiles: ["tools"]   # не стартует от "up", только через "docker compose run parser ..."
+
+volumes:
+  pgdata:

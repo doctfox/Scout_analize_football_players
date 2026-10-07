@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Секреты: свои настройки — в settings.env (шаблон: settings.example.env)
+settings.env
+.env
+
+# Кэши и скачанные данные (гигабайты, пересобираются парсером)
+cache/
+data/
+downloaded_files/
+
+# Отчёты сопоставления — генерируются при каждом запуске
+reports/*
+!reports/player_aliases.example.csv
+
+# Старые копии кода
+backup_*/
+
+# IDE / ОС
+.idea/
+.vscode/
+.streamlit/secrets.toml
+Thumbs.db
+.DS_Store
+
+# аварийные дампы Git Bash
+*.stackdump
