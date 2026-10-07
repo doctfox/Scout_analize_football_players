@@ -1,0 +1,10 @@
+# Переводы строк: в репозитории — LF, на компьютере — как удобно системе
+* text=auto
+
+# Файлы, которые выполняются внутри Linux-контейнеров: всегда LF (с CRLF Tor не запустится)
+*.sh text eol=lf
+Dockerfile text eol=lf
+tor/torrc text eol=lf
+
+# Командные файлы Windows: всегда CRLF
+*.bat text eol=crlf
